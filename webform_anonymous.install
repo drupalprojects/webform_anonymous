@@ -1,0 +1,35 @@
+<?php
+/**
+ * @file
+ * Webform Anonymous module install/schema hooks.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function webform_anonymous_schema() {
+  $schema = array();
+
+  $schema['webform_anonymous'] = array(
+    'description' => 'Table for storing the anonymous status for webform nodes.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'The node identifier of a webform.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'anonymous' => array(
+        'description' => 'The anonymous status.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+  
+  return $schema;
+}

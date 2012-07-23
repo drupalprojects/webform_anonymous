@@ -1,0 +1,59 @@
+<?php
+/**
+ * @file
+ * This module enables a webform setting to anonymize the webform's results from everyone.
+ *
+ * @author Daniel Imhoff
+ */
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_state) {
+  $form['#submit'][] = 'webform_anonymous_form_webform_configure_form_submit';
+
+  $form['submission']['anonymous'] = array(
+    '#type' => 'radios',
+    '#title' => t('Anonymize results'),
+    '#description' => t('Make the results of this webform anonymous to everyone.'),
+    '#options' => array(
+      1 => t('Yes'),
+      0 => t('No'),
+    ),
+    '#default_value' => _webform_anonymous_fetch_anonymous_status($form['#node']->nid) ? 1 : 0,
+  );
+}
+
+/**
+ * Additional submit handler for saving whether or not the webform results are anonymous.
+ */
+function webform_anonymous_form_webform_configure_form_submit(&$form, &$form_state) {
+  // Fetch the preexisting value.
+  $existing = _webform_anonymous_fetch_anonymous_status($form_state['values']['nid']);
+
+  // No need to write the record if it wasn't changed.
+  if ($form_state['values']['anonymous'] !== $existing) {
+    // Prep the record.
+    $record = array(
+      'nid' => $form_state['values']['nid'],
+      'anonymous' => $form_state['values']['anonymous'],
+    );
+
+    // Insert or update the record.
+    drupal_write_record('webform_anonymous', $record, FALSE === $existing ? array() : 'nid');
+  }
+}
+
+/**
+ * Grabs the anonymous setting of a webform based on the node ID that it belongs.
+ *
+ * @param $nid
+ *   The node ID that the webform belongs.
+ */
+function _webform_anonymous_fetch_anonymous_status($nid) {
+  return db_select('webform_anonymous', 'w', array('fetch' => PDO::FETCH_ASSOC))
+    ->condition('w.nid', $nid)
+    ->fields('w')
+    ->execute()
+    ->fetchField(1);
+}
