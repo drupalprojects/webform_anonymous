@@ -31,16 +31,70 @@ function webform_anonymous_form_webform_configure_form_submit(&$form, &$form_sta
   // Fetch the preexisting value.
   $existing = _webform_anonymous_fetch_anonymous_status($form_state['values']['nid']);
 
-  // No need to write the record if it wasn't changed.
+  // No need to do all this work if it wasn't changed.
   if ($form_state['values']['anonymous'] !== $existing) {
-    // Prep the record.
     $record = array(
       'nid' => $form_state['values']['nid'],
       'anonymous' => $form_state['values']['anonymous'],
     );
 
-    // Insert or update the record.
+    // Insert or update the anonymous status of this webform.
     drupal_write_record('webform_anonymous', $record, FALSE === $existing ? array() : 'nid');
+
+    // If the results of webform should be made anonymous...
+    if ($form_state['values']['anonymous']) {
+      // Grab preexisting submission information from the {webform_submissions} table.
+      $results = db_select('webform_submissions', 'w', array('fetch' => PDO::FETCH_ASSOC))
+        ->condition('w.nid', $form_state['values']['nid'])
+        ->fields('w')
+        ->execute()
+        ->fetchAllAssoc('sid');
+
+      // Delete previous submissions.
+      db_delete('webform_anonymous_submissions')
+        ->condition('nid', $form_state['values']['nid'])
+        ->execute();
+
+      // Save the preexisting submission information in a separate table.
+      $query = db_insert('webform_anonymous_submissions')
+        ->fields(array('sid', 'nid', 'uid'));
+
+      foreach ($results as $sid => $result) {
+        $query->values(array(
+          'sid' => $sid,
+          'nid' => $result['nid'],
+          'uid' => $result['uid'],
+        ));
+      }
+
+      $query->execute();
+
+      // Anonymize the submissions in the {webform_submissions} table.
+      db_update('webform_submissions')
+        ->fields(array(
+          'uid' => 0,
+        ))
+        ->condition('nid', $form_state['values']['nid'])
+        ->execute();
+    }
+    // Else, we need to bring back all that information.
+    else {
+      $results = db_select('webform_anonymous_submissions', 'w', array('fetch' => PDO::FETCH_ASSOC))
+        ->condition('w.nid', $form_state['values']['nid'])
+        ->fields('w')
+        ->execute()
+        ->fetchAllAssoc('sid');
+
+      // Replace each uid value to what it was originally.
+      foreach ($results as $sid => $result) {
+        drupal_write_record('webform_submissions', $result, 'sid');
+      }
+
+      // Drop unneeded data.
+      db_delete('webform_anonymous_submissions')
+        ->condition('nid', $form_state['values']['nid'])
+        ->execute();
+    }
   }
 }
 
