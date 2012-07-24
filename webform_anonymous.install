@@ -31,45 +31,5 @@ function webform_anonymous_schema() {
     'primary key' => array('nid'),
   );
 
-  $schema['webform_anonymous_submissions'] = array(
-    'description' => 'Table for keeping track of the users that have used the webform.',
-    'fields' => array(
-      'sid' => array(
-        'description' => 'The unique identifier for this submission.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'nid' => array(
-        'description' => 'The node identifier of a webform.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'uid' => array(
-        'description' => 'The id of the user that completed this submission.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-    ),
-    'unique keys' => array(
-      'sid_nid' => array('sid', 'nid'),
-    ),
-    'indexes' => array(
-      'nid_uid_sid' => array('nid', 'uid', 'sid'),
-      'nid_sid' => array('nid', 'sid'),
-    ),
-  );
-
   return $schema;
-}
-
-/**
- * Implements hook_uninstall().
- */
-function webform_anonymous_uninstall() {
-  // Copy back all submission information from {webform_anonymous_submissions} to {webform_submissions}.
 }

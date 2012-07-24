@@ -7,21 +7,37 @@
  */
 
 /**
+ * Implements hook_permission().
+ */
+function webform_anonymous_permission() {
+  return array(
+    'anonymize webform results' => array(
+      'title' => t('Edit anonymize results setting'),
+      'description' => t('Change the webform setting that anonymizes users who have submitted a webform.'),
+    ),
+  );
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_state) {
-  $form['#submit'][] = 'webform_anonymous_form_webform_configure_form_submit';
+  if(user_access('anonymize webform results')) {
+    // Add a custom submit handler.
+    $form['#submit'][] = 'webform_anonymous_form_webform_configure_form_submit';
 
-  $form['submission']['anonymous'] = array(
-    '#type' => 'radios',
-    '#title' => t('Anonymize results'),
-    '#description' => t('Make the results of this webform anonymous to everyone.'),
-    '#options' => array(
-      1 => t('Yes'),
-      0 => t('No'),
-    ),
-    '#default_value' => _webform_anonymous_fetch_anonymous_status($form['#node']->nid) ? 1 : 0,
-  );
+    // Add a Yes or No question to make the results of this webform anonymous or not.
+    $form['submission']['anonymous'] = array(
+      '#type' => 'radios',
+      '#title' => t('Anonymize results'),
+      '#description' => t('Make the results of this webform anonymous to everyone.'),
+      '#options' => array(
+        1 => t('Yes'),
+        0 => t('No'),
+      ),
+      '#default_value' => _webform_anonymous_fetch_anonymous_status($form['#node']->nid) ? 1 : 0,
+    );
+  }
 }
 
 /**
@@ -40,60 +56,31 @@ function webform_anonymous_form_webform_configure_form_submit(&$form, &$form_sta
 
     // Insert or update the anonymous status of this webform.
     drupal_write_record('webform_anonymous', $record, FALSE === $existing ? array() : 'nid');
+  }
+}
 
-    // If the results of webform should be made anonymous...
-    if ($form_state['values']['anonymous']) {
-      // Grab preexisting submission information from the {webform_submissions} table.
-      $results = db_select('webform_submissions', 'w', array('fetch' => PDO::FETCH_ASSOC))
-        ->condition('w.nid', $form_state['values']['nid'])
-        ->fields('w')
-        ->execute()
-        ->fetchAllAssoc('sid');
+/**
+ * Implements hook_form_alter().
+ */
+function webform_anonymous_form_alter(&$form, &$form_state) {
+  if (!isset($form['#node']) || !in_array($form['#node']->type, webform_variable_get('webform_node_types'))) {
+    return;
+  }
 
-      // Delete previous submissions.
-      db_delete('webform_anonymous_submissions')
-        ->condition('nid', $form_state['values']['nid'])
-        ->execute();
+  // Set the status of the anonymity of this webform's results.
+  $form['#node']->webform['anonymous'] = _webform_anonymous_fetch_anonymous_status($form['#node']->nid);
+}
 
-      // Save the preexisting submission information in a separate table.
-      $query = db_insert('webform_anonymous_submissions')
-        ->fields(array('sid', 'nid', 'uid'));
-
-      foreach ($results as $sid => $result) {
-        $query->values(array(
-          'sid' => $sid,
-          'nid' => $result['nid'],
-          'uid' => $result['uid'],
-        ));
-      }
-
-      $query->execute();
-
-      // Anonymize the submissions in the {webform_submissions} table.
-      db_update('webform_submissions')
-        ->fields(array(
-          'uid' => 0,
-        ))
-        ->condition('nid', $form_state['values']['nid'])
-        ->execute();
-    }
-    // Else, we need to bring back all that information.
-    else {
-      $results = db_select('webform_anonymous_submissions', 'w', array('fetch' => PDO::FETCH_ASSOC))
-        ->condition('w.nid', $form_state['values']['nid'])
-        ->fields('w')
-        ->execute()
-        ->fetchAllAssoc('sid');
-
-      // Replace each uid value to what it was originally.
-      foreach ($results as $sid => $result) {
-        drupal_write_record('webform_submissions', $result, 'sid');
-      }
-
-      // Drop unneeded data.
-      db_delete('webform_anonymous_submissions')
-        ->condition('nid', $form_state['values']['nid'])
-        ->execute();
+/**
+ * Implements hook_webform_submission_load().
+ */
+function webform_anonymous_webform_submission_load(&$submissions) {
+  foreach ($submissions as $sid => $submission) {
+    // If called for, anonymize uid and ip of submission before display.
+    if (_webform_anonymous_fetch_anonymous_status($submission->nid)) {
+      $submission->uid = 0;
+      $submission->name = 'Anonymous';
+      $submission->remote_addr = '0.0.0.0';
     }
   }
 }
