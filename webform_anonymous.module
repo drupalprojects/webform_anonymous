@@ -23,6 +23,16 @@ function webform_anonymous_permission() {
  */
 function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_state) {
   if(user_access('anonymize webform results')) {
+    $anonymous_setting = _webform_anonymous_webform_anonymous_setting($form['#node']->nid);
+
+    if (FALSE !== $anonymous_setting) {
+      $locker = user_load($anonymous_setting['locked_uid']);
+      $locker_uri = entity_uri('user', $locker);
+    }
+
+    // Add custom Javascript.
+    $form['#attached']['js'][] = drupal_get_path('module', 'webform_anonymous') . '/js/webform_anonymous.admin.js';
+
     // Add a custom submit handler.
     $form['#submit'][] = 'webform_anonymous_form_webform_configure_form_submit';
 
@@ -35,7 +45,23 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
         1 => t('Yes'),
         0 => t('No'),
       ),
-      '#default_value' => _webform_anonymous_fetch_anonymous_status($form['#node']->nid) ? 1 : 0,
+      '#default_value' => $anonymous_setting !== FALSE && $anonymous_setting['anonymous'] ? 1 : 0,
+      '#disabled' => $anonymous_setting !== FALSE && $anonymous_setting['locked'] ? 1 : 0,
+    );
+
+    $form['submission']['anonymous_locked'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Lock anonymity'),
+      '#description' => $anonymous_setting === FALSE || !$anonymous_setting['locked'] ?
+        t('Warning: Once locked, the results of this webform will be irreversibly anonymous.') :
+        t('The results of this webform have been locked in an anonymous state by !user.', array('!user' => l($locker->name, $locker_uri['path']))),
+      '#default_value' => $anonymous_setting !== FALSE && $anonymous_setting['locked'] ? 1 : 0,
+      '#states' => array(
+        'visible' => array(
+          ':input[name="anonymous"]' => array('value' => 1),
+        ),
+      ),
+      '#disabled' => $anonymous_setting !== FALSE && $anonymous_setting['locked'] ? 1 : 0,
     );
   }
 }
@@ -44,18 +70,29 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
  * Additional submit handler for saving whether or not the webform results are anonymous.
  */
 function webform_anonymous_form_webform_configure_form_submit(&$form, &$form_state) {
-  // Fetch the preexisting value.
-  $existing = _webform_anonymous_fetch_anonymous_status($form_state['values']['nid']);
+  global $user;
+
+  // Fetch the anonymous setting of this webform.
+  $anonymous_setting = _webform_anonymous_webform_anonymous_setting($form['#node']->nid);
 
   // No need to do all this work if it wasn't changed.
-  if ($form_state['values']['anonymous'] !== $existing) {
+  if (FALSE === $anonymous_setting
+    || $form_state['values']['anonymous'] !== $anonymous_setting['anonymous']
+    || (string) $form_state['values']['anonymous_locked'] !== $anonymous_setting['locked']) {
+
+    if (!$form_state['values']['anonymous']) {
+      $form_state['values']['anonymous_locked'] = 0;
+    }
+
     $record = array(
-      'nid' => $form_state['values']['nid'],
+      'nid' => $form['#node']->nid,
       'anonymous' => $form_state['values']['anonymous'],
+      'locked' => $form_state['values']['anonymous_locked'],
+      'locked_uid' => FALSE !== $anonymous_setting && $form_state['values']['anonymous_locked'] !== $anonymous_setting['locked'] ? $user->uid : 0,
     );
 
     // Insert or update the anonymous status of this webform.
-    drupal_write_record('webform_anonymous', $record, FALSE === $existing ? array() : 'nid');
+    drupal_write_record('webform_anonymous', $record, FALSE === $anonymous_setting ? array() : 'nid');
   }
 }
 
@@ -68,7 +105,7 @@ function webform_anonymous_form_alter(&$form, &$form_state) {
   }
 
   // Set the status of the anonymity of this webform's results.
-  $form['#node']->webform['anonymous'] = _webform_anonymous_fetch_anonymous_status($form['#node']->nid);
+  $form['#node']->webform['anonymous'] = _webform_anonymous_webform_is_anonymous($form['#node']->nid);
 }
 
 /**
@@ -77,7 +114,7 @@ function webform_anonymous_form_alter(&$form, &$form_state) {
 function webform_anonymous_webform_submission_load(&$submissions) {
   foreach ($submissions as $sid => $submission) {
     // If called for, anonymize uid and ip of submission before display.
-    if (_webform_anonymous_fetch_anonymous_status($submission->nid)) {
+    if (_webform_anonymous_webform_is_anonymous($submission->nid)) {
       $submission->uid = 0;
       $submission->name = 'Anonymous';
       $submission->remote_addr = '0.0.0.0';
@@ -86,15 +123,29 @@ function webform_anonymous_webform_submission_load(&$submissions) {
 }
 
 /**
- * Grabs the anonymous setting of a webform based on the node ID that it belongs.
+ * Returns 1 if the webform (found by node ID) is anonymous, 0 or FALSE otherwise.
  *
  * @param $nid
  *   The node ID that the webform belongs.
  */
-function _webform_anonymous_fetch_anonymous_status($nid) {
+function _webform_anonymous_webform_is_anonymous($nid) {
   return db_select('webform_anonymous', 'w', array('fetch' => PDO::FETCH_ASSOC))
     ->condition('w.nid', $nid)
     ->fields('w')
     ->execute()
     ->fetchField(1);
+}
+
+/**
+ * Returns a row of information represented as an associated array.
+ *
+ * @param $nid
+ *   The node ID that the webform belongs.
+ */
+function _webform_anonymous_webform_anonymous_setting($nid) {
+  return db_select('webform_anonymous', 'w', array('fetch' => PDO::FETCH_ASSOC))
+    ->condition('w.nid', $nid)
+    ->fields('w')
+    ->execute()
+    ->fetchAssoc();
 }
