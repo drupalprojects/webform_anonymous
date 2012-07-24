@@ -30,9 +30,6 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
       $locker_uri = entity_uri('user', $locker);
     }
 
-    // Add custom Javascript.
-    $form['#attached']['js'][] = drupal_get_path('module', 'webform_anonymous') . '/js/webform_anonymous.admin.js';
-
     // Add a custom submit handler.
     $form['#submit'][] = 'webform_anonymous_form_webform_configure_form_submit';
 
