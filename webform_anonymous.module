@@ -22,7 +22,7 @@ function webform_anonymous_permission() {
  * Implements hook_form_FORM_ID_alter().
  */
 function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_state) {
-  if(user_access('anonymize webform results')) {
+  if (user_access('anonymize webform results')) {
     $anonymous_setting = _webform_anonymous_webform_anonymous_setting($form['#node']->nid);
 
     if (FALSE !== $anonymous_setting) {
@@ -49,6 +49,7 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
       '#disabled' => $anonymous_setting !== FALSE && $anonymous_setting['locked'] ? 1 : 0,
     );
 
+    // A checkbox in case the webform creator wants to lock the results in an anonymous state.
     $form['submission']['anonymous_locked'] = array(
       '#type' => 'checkbox',
       '#title' => t('Lock anonymity'),
