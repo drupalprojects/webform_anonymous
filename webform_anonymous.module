@@ -44,8 +44,8 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
         1 => t('Yes'),
         0 => t('No'),
       ),
-      '#default_value' => $anonymous_setting !== FALSE && $anonymous_setting['anonymous'] ? 1 : 0,
-      '#disabled' => $anonymous_setting !== FALSE && $anonymous_setting['locked'] ? 1 : 0,
+      '#default_value' => FALSE !== $anonymous_setting && $anonymous_setting['anonymous'] ? 1 : 0,
+      '#disabled' => FALSE !== $anonymous_setting && $anonymous_setting['locked'] ? 1 : 0,
     );
 
     // A checkbox in case the webform creator wants to lock the results in an
@@ -53,14 +53,14 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
     $form['submission']['anonymous_locked'] = array(
       '#type' => 'checkbox',
       '#title' => t('Lock anonymity'),
-      '#description' => $anonymous_setting === FALSE || !$anonymous_setting['locked'] ? t('Warning: Once locked, the results of this webform will be irreversibly anonymous.') : t('The results of this webform have been locked in an anonymous state by !user.', array('!user' => l($locker->name, $locker_uri['path']))),
-      '#default_value' => $anonymous_setting !== FALSE && $anonymous_setting['locked'] ? 1 : 0,
+      '#description' => FALSE === $anonymous_setting || !$anonymous_setting['locked'] ? t('Warning: Once locked, the results of this webform will be irreversibly anonymous.') : t('The results of this webform have been locked in an anonymous state by !user.', array('!user' => l($locker->name, $locker_uri['path']))),
+      '#default_value' => FALSE !== $anonymous_setting && $anonymous_setting['locked'] ? 1 : 0,
       '#states' => array(
         'visible' => array(
           ':input[name="anonymous"]' => array('value' => 1),
         ),
       ),
-      '#disabled' => $anonymous_setting !== FALSE && $anonymous_setting['locked'] ? 1 : 0,
+      '#disabled' => FALSE !== $anonymous_setting && $anonymous_setting['locked'] ? 1 : 0,
     );
   }
 }
