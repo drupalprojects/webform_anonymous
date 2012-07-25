@@ -66,8 +66,7 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
 }
 
 /**
- * Additional submit handler for saving whether or not the webform results are
- * anonymous.
+ * Additional submit handler for saving webform anonymous settings.
  */
 function webform_anonymous_form_webform_configure_form_submit(&$form, &$form_state) {
   global $user;
@@ -123,14 +122,13 @@ function webform_anonymous_webform_submission_load(&$submissions) {
 }
 
 /**
- * Fetch whether or not a webform should have anonymous results by the node ID
- * that the webform belongs.
+ * Fetch whether or not a webform should have anonymous results.
  *
- * @param $nid int
+ * @param int $nid
  *   The node ID that the webform belongs.
  *
- * @return
- *   1 if the webform (found by node ID) is anonymous, 0 or FALSE otherwise.
+ * @return int
+ *   1 if the webform is anonymous, 0 if not, FALSE if not found.
  */
 function _webform_anonymous_webform_is_anonymous($nid) {
   return db_select('webform_anonymous', 'w', array('fetch' => PDO::FETCH_ASSOC))
@@ -141,14 +139,13 @@ function _webform_anonymous_webform_is_anonymous($nid) {
 }
 
 /**
- * Fetch the anonymous settings and information of a webform by the node ID that
- * the webform belongs.
+ * Fetch the anonymous settings and information of a webform by the node ID.
  *
- * @param $nid int
+ * @param int $nid
  *   The node ID that the webform belongs.
  *
- * @return
-*    A row of information represented as an associated array.
+ * @return array
+ *   A row of information represented as an associated array.
  */
 function _webform_anonymous_webform_anonymous_information($nid) {
   return db_select('webform_anonymous', 'w', array('fetch' => PDO::FETCH_ASSOC))
