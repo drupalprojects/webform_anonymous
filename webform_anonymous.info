@@ -2,5 +2,4 @@ name = Webform Anonymous
 description = Enables selected webform results to be anonymous.
 package = Webform
 core = 7.x
-version = 7.x-1.0
 dependencies[] = webform
