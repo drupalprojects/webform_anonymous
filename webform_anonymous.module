@@ -118,14 +118,12 @@ function webform_anonymous_webform_submission_load(&$submissions) {
   $submission = current($submissions);
   $anonymous_setting = _webform_anonymous_webform_anonymous_information($submission->nid);
 
-  if (FALSE === $anonymous_setting || $anonymous_setting['anonymous']) {
+  if (FALSE !== $anonymous_setting && $anonymous_setting['anonymous']) {
     foreach ($submissions as $sid => $submission) {
       // If called for, anonymize uid and ip of submission before display.
-      if ($anonymous_setting) {
-        $submission->uid = 0;
-        $submission->name = 'Anonymous';
-        $submission->remote_addr = '0.0.0.0';
-      }
+      $submission->uid = 0;
+      $submission->name = 'Anonymous';
+      $submission->remote_addr = '0.0.0.0';
     }
   }
 }
