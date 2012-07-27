@@ -103,39 +103,31 @@ function webform_anonymous_form_alter(&$form, &$form_state) {
     return;
   }
 
-  // Set the status of the anonymity of this webform's results.
-  $form['#node']->webform['anonymous'] = _webform_anonymous_webform_is_anonymous($form['#node']->nid);
+  if (isset($form['#node']->nid)) {
+    $anonymous_setting = _webform_anonymous_webform_anonymous_information($form['#node']->nid);
+
+    // Set the status of the anonymity of this webform's results.
+    $form['#node']->webform['anonymous'] = isset($anonymous_setting) && !empty($anonymous_setting) ? 1 : 0;
+  }
 }
 
 /**
  * Implements hook_webform_submission_load().
  */
 function webform_anonymous_webform_submission_load(&$submissions) {
-  foreach ($submissions as $sid => $submission) {
-    // If called for, anonymize uid and ip of submission before display.
-    if (_webform_anonymous_webform_is_anonymous($submission->nid)) {
-      $submission->uid = 0;
-      $submission->name = 'Anonymous';
-      $submission->remote_addr = '0.0.0.0';
+  $submission = current($submissions);
+  $anonymous_setting = _webform_anonymous_webform_anonymous_information($submission->nid);
+
+  if (FALSE === $anonymous_setting || $anonymous_setting['anonymous']) {
+    foreach ($submissions as $sid => $submission) {
+      // If called for, anonymize uid and ip of submission before display.
+      if ($anonymous_setting) {
+        $submission->uid = 0;
+        $submission->name = 'Anonymous';
+        $submission->remote_addr = '0.0.0.0';
+      }
     }
   }
-}
-
-/**
- * Fetch whether or not a webform should have anonymous results.
- *
- * @param int $nid
- *   The node ID that the webform belongs.
- *
- * @return int
- *   1 if the webform is anonymous, 0 if not, FALSE if not found.
- */
-function _webform_anonymous_webform_is_anonymous($nid) {
-  return db_select('webform_anonymous', 'w', array('fetch' => PDO::FETCH_ASSOC))
-    ->condition('w.nid', $nid)
-    ->fields('w')
-    ->execute()
-    ->fetchField(1);
 }
 
 /**
