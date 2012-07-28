@@ -69,8 +69,6 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
  * Additional submit handler for saving webform anonymous settings.
  */
 function webform_anonymous_form_webform_configure_form_submit(&$form, &$form_state) {
-  global $user;
-
   // Fetch the anonymous setting of this webform.
   $anonymous_setting = _webform_anonymous_webform_anonymous_information($form['#node']->nid);
 
@@ -78,6 +76,7 @@ function webform_anonymous_form_webform_configure_form_submit(&$form, &$form_sta
   if (FALSE === $anonymous_setting
     || $form_state['values']['anonymous'] !== $anonymous_setting['anonymous']
     || (string) $form_state['values']['anonymous_locked'] !== $anonymous_setting['locked']) {
+    global $user;
 
     if (!$form_state['values']['anonymous']) {
       $form_state['values']['anonymous_locked'] = 0;
@@ -99,16 +98,14 @@ function webform_anonymous_form_webform_configure_form_submit(&$form, &$form_sta
  * Implements hook_form_alter().
  */
 function webform_anonymous_form_alter(&$form, &$form_state) {
-  if (!isset($form['#node']) || !in_array($form['#node']->type, webform_variable_get('webform_node_types'))) {
+  if (!isset($form['#node']) || !isset($form['#node']->nid) || !in_array($form['#node']->type, webform_variable_get('webform_node_types'))) {
     return;
   }
 
-  if (isset($form['#node']->nid)) {
-    $anonymous_setting = _webform_anonymous_webform_anonymous_information($form['#node']->nid);
+  $anonymous_setting = _webform_anonymous_webform_anonymous_information($form['#node']->nid);
 
-    // Set the status of the anonymity of this webform's results.
-    $form['#node']->webform['anonymous'] = isset($anonymous_setting) && !empty($anonymous_setting) ? 1 : 0;
-  }
+  // Set the status of the anonymity of this webform's results.
+  $form['#node']->webform['anonymous'] = isset($anonymous_setting) && !empty($anonymous_setting) ? 1 : 0;
 }
 
 /**
