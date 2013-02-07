@@ -8,15 +8,10 @@
  */
 
 /**
- * Implements hook_permission().
+ * Implements hook_perm().
  */
-function webform_anonymous_permission() {
-  return array(
-    'anonymize webform results' => array(
-      'title' => t('Edit anonymize results setting'),
-      'description' => t('Change the webform setting that anonymizes users who have submitted a webform.'),
-    ),
-  );
+function webform_anonymous_perm() {
+  return array('anonymize webform results');
 }
 
 /**
@@ -28,7 +23,6 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
 
     if (!empty($anonymous_setting)) {
       $locker = user_load($anonymous_setting['locked_uid']);
-      $locker_uri = entity_uri('user', $locker);
     }
 
     // Add a custom submit handler.
@@ -45,14 +39,14 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
         0 => t('No'),
       ),
       '#default_value' => !empty($anonymous_setting) && $anonymous_setting['anonymous'] ? 1 : 0,
-      '#disabled' => !empty($anonymous_setting) && $anonymous_setting['locked'] ? 1 : 0,
+      '#disabled' => !empty($anonymous_setting) && $anonymous_setting['locked'] ? 1 : 0
     );
 
     if (empty($anonymous_setting) || !$anonymous_setting['locked']) {
       $description = t('Warning: Once locked, the results of this webform will be irreversibly anonymous.');
     }
     else {
-      $description = t('The results of this webform have been locked in an anonymous state by !user.', array('!user' => l($locker->name, $locker_uri['path'])));
+      $description = t('The results of this webform have been locked in an anonymous state by !user.', array('!user' => l($locker->name, 'user/'. $locker->uid)));
     }
 
     // A checkbox in case the webform creator wants to lock the results in an
@@ -62,11 +56,6 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
       '#title' => t('Lock anonymity'),
       '#description' => $description,
       '#default_value' => !empty($anonymous_setting) && $anonymous_setting['locked'] ? 1 : 0,
-      '#states' => array(
-        'visible' => array(
-          ':input[name="anonymous"]' => array('value' => 1),
-        ),
-      ),
       '#disabled' => !empty($anonymous_setting) && $anonymous_setting['locked'] ? 1 : 0,
     );
   }
@@ -128,9 +117,5 @@ function webform_anonymous_webform_submission_load(&$submissions) {
  *   A row of information represented as an associative array.
  */
 function _webform_anonymous_webform_anonymous_information($nid) {
-  return db_select('webform_anonymous', 'w', array('fetch' => PDO::FETCH_ASSOC))
-    ->condition('w.nid', $nid)
-    ->fields('w')
-    ->execute()
-    ->fetchAssoc();
+  return db_fetch_array(db_query('SELECT * FROM {webform_anonymous} w WHERE w.nid = %d', $nid));
 }

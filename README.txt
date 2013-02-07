@@ -10,6 +10,7 @@ INTRODUCTION
 ------------
 
 Current Maintainer: Daniel Imhoff <dwieeb@gmail.com>
+Drupal 6 Backport:  Aaron Fulton (aaron1234nz)
 
 Webform Anonymous is a very simple, lightweight module gives the creator of a
 webform the option to make the submission results anonymous, by hiding the

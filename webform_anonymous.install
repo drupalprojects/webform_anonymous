@@ -7,6 +7,20 @@
  */
 
 /**
+ * Implements hook_install().
+ */
+function webform_anonymous_install() {
+  drupal_install_schema('webform_anonymous');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function webform_anonymous_uninstall() {
+  drupal_install_schema('webform_anonymous');
+}
+
+/**
  * Implements hook_schema().
  */
 function webform_anonymous_schema() {
