@@ -17,7 +17,7 @@ function webform_anonymous_install() {
  * Implements hook_uninstall().
  */
 function webform_anonymous_uninstall() {
-  drupal_install_schema('webform_anonymous');
+  drupal_uninstall_schema('webform_anonymous');
 }
 
 /**
