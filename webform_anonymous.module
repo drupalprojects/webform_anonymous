@@ -52,7 +52,7 @@ function webform_anonymous_form_webform_configure_form_alter(&$form, &$form_stat
       $description = t('Warning: Once locked, the results of this webform will be irreversibly anonymous.');
     }
     else {
-      $description = t('The results of this webform have been locked in an anonymous state by !user.', array('!user' => l($locker->name, $locker_uri['path'])));
+      $description = t('The results of this webform have been locked in an anonymous state by !user.', array('!user' => l(format_username($locker), $locker_uri['path'])));
     }
 
     // A checkbox in case the webform creator wants to lock the results in an
