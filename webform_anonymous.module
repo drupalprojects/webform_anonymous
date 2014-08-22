@@ -102,6 +102,77 @@ function webform_anonymous_form_webform_configure_form_submit(&$form, &$form_sta
 }
 
 /**
+ * Implements hook_form_FORM_ID_alter() for webform_client_form().
+ */
+function webform_anonymous_form_webform_client_form_alter(&$form, &$form_state) {
+  $form['#submit'][] = 'webform_anonymous_webform_client_form_submit';
+}
+
+/**
+ * Submit handler for webform_client_form().
+ *
+ * @see webform_client_form_submit()
+ * @see webform_anonymous_webform_confirmation_page_access()
+ */
+function webform_anonymous_webform_client_form_submit($form, &$form_state) {
+  // If webform submissions are anonymous, make sure all users get a token
+  // added to the URL that will allow them access to the webform confirmation
+  // page. (Normally the Webform module only does this for anonymous users and
+  // relies on the loaded submission user ID to check access for authenticated
+  // users, but that will not be available if the webform submission is
+  // anonymous.)
+  if (!empty($form_state['values']['details']['nid']) && ($anonymous_info = _webform_anonymous_webform_anonymous_information($form_state['values']['details']['nid'])) && !empty($anonymous_info['anonymous'])) {
+    if (is_array($form_state['redirect']) && !empty($form_state['redirect'][1]['query']['sid']) && !isset($form_state['redirect'][1]['query']['token'])) {
+      $submission = webform_get_submission($form['#node']->nid, $form_state['redirect'][1]['query']['sid']);
+      $form_state['redirect'][1]['query']['token'] = md5($submission->submitted . $submission->sid . drupal_get_private_key());
+    }
+  }
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function webform_anonymous_menu_alter(&$items) {
+  if ($items['node/%webform_menu/done']['access callback'] == 'webform_confirmation_page_access') {
+    $items['node/%webform_menu/done']['access callback'] = 'webform_anonymous_webform_confirmation_page_access';
+  }
+}
+
+/**
+ * Substitute access callback for webform confirmation pages.
+ *
+ * @see webform_confirmation_page_access()
+ * @see webform_anonymous_webform_client_form_submit()
+ */
+function webform_anonymous_webform_confirmation_page_access($node) {
+  global $user;
+
+  // First check the normal access callback.
+  if (webform_confirmation_page_access($node)) {
+    return TRUE;
+  }
+
+  // If the access callback returned FALSE but this is a logged-in user
+  // submitting a form with anonymous submissions, check for a token in the URL
+  // the same way the normal access callback does for anonymous users.
+  if ($user->uid && !empty($node->nid) && ($anonymous_info = _webform_anonymous_webform_anonymous_information($node->nid)) && !empty($anonymous_info['anonymous'])) {
+    $sid = (!empty($_GET['sid']) && (int) $_GET['sid'] > 0) ? (int) $_GET['sid'] : NULL;
+    if ($sid) {
+      module_load_include('inc', 'webform', 'includes/webform.submissions');
+      if ($submission = webform_get_submission($node->nid, $sid)) {
+        $hash_query = !empty($_GET['token']) ? $_GET['token'] : NULL;
+        $hash = md5($submission->submitted . $submission->sid . drupal_get_private_key());
+        if ($hash_query === $hash) {
+          return TRUE;
+        }
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+/**
  * Implements hook_webform_submission_load().
  */
 function webform_anonymous_webform_submission_load(&$submissions) {
